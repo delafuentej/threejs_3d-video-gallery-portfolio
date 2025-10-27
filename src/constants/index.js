@@ -1,0 +1,18 @@
+export const projectsVideos = [
+  { name: "./videos/vd1.mov" },
+  { name: "./videos/vd2.mov" },
+  { name: "./videos/vd3.mov" },
+  { name: "./videos/vd4.mov" },
+  { name: "./videos/vd5.mov" },
+  { name: "./videos/vd6.mov" },
+  { name: "./videos/vd7.mov" },
+  { name: "./videos/vd8.mov" },
+  { name: "./videos/vd9.mov" },
+  { name: "./videos/vd10.mov" },
+  { name: "./videos/vd11.mov" },
+  { name: "./videos/vd12.mov" },
+  { name: "./videos/vd13.mov" },
+  { name: "./videos/vd14.mov" },
+  { name: "./videos/vd15.mov" },
+  { name: "./videos/vd16.mov" },
+];
