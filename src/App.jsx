@@ -1,10 +1,10 @@
-import { Navbar, Footer } from "./components";
+import { Navbar, Footer, VideoGallery } from "./components";
 
 function App() {
   return (
     <>
       <Navbar />
-
+      <VideoGallery />
       <Footer />
     </>
   );

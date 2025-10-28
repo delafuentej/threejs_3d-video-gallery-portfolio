@@ -5,12 +5,15 @@ const VideoPlayerHLS = ({ src }) => {
   const videoRef = useRef();
 
   useEffect(() => {
+    const video = videoRef.current;
+
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      const hls = new Hls({ maxBufferLength: 30 });
       hls.loadSource(src);
-      hls.attachMedia(videoRef.current);
-    } else if (videoRef.current.canPlayType("application/vnd.apple.mpegurl")) {
-      videoRef.current.src = src;
+      hls.attachMedia(video);
+      return () => hls.destroy();
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = src;
     }
   }, [src]);
 
@@ -18,8 +21,8 @@ const VideoPlayerHLS = ({ src }) => {
     <video
       ref={videoRef}
       controls
-      className="w-full rounded-xl shadow-lg"
       preload="none"
+      className="w-full h-full rounded-2xl shadow-lg object-cover hover:scale-[1.02] transition-transform duration-300"
     />
   );
 };
