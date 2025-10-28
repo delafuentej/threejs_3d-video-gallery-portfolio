@@ -1,10 +1,11 @@
-import { Navbar, Footer, VideoGallery } from "./components";
+import { Navbar, Footer, ThreeSceneWrapper } from "./components";
+import { projectsVideos } from "./constants";
 
 function App() {
   return (
     <>
       <Navbar />
-      <VideoGallery />
+      <ThreeSceneWrapper videos={projectsVideos} />
       <Footer />
     </>
   );
