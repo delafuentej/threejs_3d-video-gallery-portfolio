@@ -16,7 +16,5 @@ export default function ThreeSceneWrapper() {
     verticalCurvature: 0.5,
   });
 
-  return (
-    <div ref={mountRef} className="fixed top-0 left-0 w-full h-full z-0" />
-  );
+  return <div ref={mountRef} />;
 }

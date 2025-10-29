@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
-import { Scene, PerspectiveCamera, WebGLRenderer } from "three";
+import * as THREE from "three";
 import useMouseParallax from "./useMouseParallax";
-import createVideoPlane from "../utils";
+import { isObjectVisible, createVideoPlane } from "../utils/";
 import { baseParams } from "../constants";
 
 export default function useThreeScene(videos, options = {}) {
@@ -9,15 +9,17 @@ export default function useThreeScene(videos, options = {}) {
   const sceneRef = useRef();
   const cameraRef = useRef();
   const rendererRef = useRef();
+  const planesRef = useRef([]);
+
   const { mouse, lookAtTarget, updateTarget } = useMouseParallax();
   const params = { ...baseParams, ...options };
 
   useEffect(() => {
     if (!mountRef.current) return;
 
-    // --- Setup Scene ---
-    const scene = new Scene();
-    const camera = new PerspectiveCamera(
+    // --- SETUP ---
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
       25,
       window.innerWidth / window.innerHeight,
       0.1,
@@ -25,8 +27,11 @@ export default function useThreeScene(videos, options = {}) {
     );
     camera.position.set(0, 0, 40);
 
-    //renderer
-    const renderer = new WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: false, // ⚙️ reduce carga GPU
+      powerPreference: "high-performance",
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0xffffff);
     mountRef.current.appendChild(renderer.domElement);
@@ -35,7 +40,7 @@ export default function useThreeScene(videos, options = {}) {
     cameraRef.current = camera;
     rendererRef.current = renderer;
 
-    // --- helper functions ---
+    // --- Helper functions ---
     const calculateRotations = (x, y) => {
       const a = 1 / (params.depth * params.curvature);
       const slopeY = -2 * a * x;
@@ -72,73 +77,178 @@ export default function useThreeScene(videos, options = {}) {
         plane.position.set(x, y, z);
         plane.rotation.x = rotationX;
         plane.rotation.y = rotationY;
+
         plane.userData.basePosition = { x, y, z };
         plane.userData.baseRotation = { x: rotationX, y: rotationY, z: 0 };
-        planes.push(plane);
+        plane.userData.lastFrameTime = 0;
+        plane.visible = false;
+
+        scene.background = new THREE.Color(0x4d4d4d);
         scene.add(plane);
+        planes.push(plane);
       }
     }
+    planesRef.current = planes;
 
     // --- Animation loop ---
+    const clock = new THREE.Clock();
+    let lastRenderTime = 0;
+    const targetFPS = 30; // ⚙️ ajusta si quieres más fluidez
+    const frameInterval = 1 / targetFPS;
+
+    // const animate = () => {
+    // requestAnimationFrame(animate);
+    // if (document.hidden) return; // ⚙️ pausa si pestaña inactiva
+
+    // const delta = clock.getDelta();
+    // lastRenderTime += delta;
+    // if (lastRenderTime < frameInterval) return;
+    // lastRenderTime = 0;
+
+    // updateTarget();
+
+    // for (const mesh of planes) {
+    // const visible = isObjectVisible(camera, mesh);
+    // mesh.visible = visible;
+
+    // const videoEl = mesh.userData.videoEl;
+    // if (!videoEl) continue;
+
+    // if (visible) {
+    // if (videoEl.paused) videoEl.play().catch(() => {});
+    // } else {
+    // if (!videoEl.paused) videoEl.pause();
+    // }
+
+    // Solo actualizar textura si el frame cambia
+    // if (videoEl.readyState >= 2) {
+    // const currentTimeSec = Math.floor(videoEl.currentTime * 10) / 10; // redondea a 0.1s
+    // if (currentTimeSec !== mesh.userData.lastFrameTime) {
+    // mesh.material.map.needsUpdate = true;
+    // mesh.userData.lastFrameTime = currentTimeSec;
+    // }
+    // }
+    // if (
+    // videoEl.readyState >= 2 &&
+    // videoEl.currentTime !== mesh.userData.lastFrameTime
+    // ) {
+    // mesh.userData.lastFrameTime = videoEl.currentTime;
+    // mesh.material.map.needsUpdate = true;
+    // }
+
+    // --- Movimiento parallax ---
+    // const {
+    // basePosition,
+    // baseRotation,
+    // parallaxFactor,
+    // randomOffset,
+    // rotationModifier,
+    // phaseOffset,
+    // } = mesh.userData;
+    // const data = mesh.userData || {};
+    // const basePosition = data.basePosition || { x: 0, y: 0, z: 0 };
+    // const baseRotation = data.baseRotation || { x: 0, y: 0, z: 0 };
+    // const parallaxFactor = data.parallaxFactor ?? 0;
+    // const randomOffset = data.randomOffset || { x: 1, y: 1, z: 1 };
+    // const rotationModifier = data.rotationModifier || { x: 0, y: 0, z: 0 };
+    // const phaseOffset = data.phaseOffset ?? 0;
+
+    // const mouseDistance = Math.sqrt(
+    // mouse.current.targetX ** 2 + mouse.current.targetY ** 2
+    // );
+    // const time = performance.now() * 0.001;
+
+    // mesh.position.x =
+    // basePosition.x +
+    // mouse.current.targetX * parallaxFactor * 3 * randomOffset.x +
+    // Math.sin(time + phaseOffset) * mouseDistance * 0.1 * randomOffset.x;
+
+    // mesh.position.y =
+    // basePosition.y +
+    // -mouse.current.targetY * parallaxFactor * 3 * randomOffset.y +
+    // Math.sin(time + phaseOffset) * mouseDistance * 0.1 * randomOffset.y;
+
+    // mesh.rotation.x =
+    // baseRotation.x +
+    // -mouse.current.targetY * rotationModifier.x * mouseDistance +
+    // Math.sin(time + phaseOffset) * rotationModifier.x * 0.2;
+
+    // mesh.rotation.y =
+    // baseRotation.y +
+    // mouse.current.targetX * rotationModifier.y * mouseDistance +
+    // Math.sin(time + phaseOffset) * rotationModifier.y * 0.2;
+    // }
+
+    // camera.lookAt(lookAtTarget.current);
+    // renderer.render(scene, camera);
+    // };
     const animate = () => {
       requestAnimationFrame(animate);
+      if (document.hidden) return;
+
+      const delta = clock.getDelta();
+      lastRenderTime += delta;
+      if (lastRenderTime < frameInterval) return;
+      lastRenderTime = 0;
+
       updateTarget();
+
+      const mouseDistance = Math.sqrt(
+        mouse.current.targetX ** 2 + mouse.current.targetY ** 2
+      );
       const time = performance.now() * 0.001;
 
-      planes.forEach((plane) => {
-        const {
-          basePosition,
-          baseRotation,
-          parallaxFactor,
-          randomOffset,
-          rotationModifier,
-          phaseOffset,
-        } = plane.userData;
-        const mouseDistance = Math.sqrt(
-          mouse.current.targetX ** 2 + mouse.current.targetY ** 2
-        );
+      for (const mesh of planes) {
+        const visible = isObjectVisible(camera, mesh);
+        mesh.visible = visible;
 
-        // position
-        plane.position.x =
+        if (!visible) continue; // ⚡ solo procesar visibles
+
+        const videoEl = mesh.userData.videoEl;
+        if (videoEl) {
+          if (videoEl.paused) videoEl.play().catch(() => {});
+
+          // solo actualizar textura si avanzó 0.1s
+          if (videoEl.readyState >= 2) {
+            const currentTimeSec = Math.floor(videoEl.currentTime * 10) / 10;
+            if (currentTimeSec !== mesh.userData.lastFrameTime) {
+              mesh.material.map.needsUpdate = true;
+              mesh.userData.lastFrameTime = currentTimeSec;
+            }
+          }
+        }
+
+        // --- Movimiento parallax ---
+        const data = mesh.userData || {};
+        const basePosition = data.basePosition || { x: 0, y: 0, z: 0 };
+        const baseRotation = data.baseRotation || { x: 0, y: 0, z: 0 };
+        const parallaxFactor = data.parallaxFactor ?? 0;
+        const randomOffset = data.randomOffset || { x: 1, y: 1, z: 1 };
+        const rotationModifier = data.rotationModifier || { x: 0, y: 0, z: 0 };
+        const phaseOffset = data.phaseOffset ?? 0;
+
+        mesh.position.x =
           basePosition.x +
           mouse.current.targetX * parallaxFactor * 3 * randomOffset.x +
           Math.sin(time + phaseOffset) * mouseDistance * 0.1 * randomOffset.x;
-        plane.position.y =
+        mesh.position.y =
           basePosition.y +
           -mouse.current.targetY * parallaxFactor * 3 * randomOffset.y +
           Math.sin(time + phaseOffset) * mouseDistance * 0.1 * randomOffset.y;
-        plane.position.z =
-          basePosition.z +
-          Math.sin(time + phaseOffset) *
-            mouseDistance *
-            0.1 *
-            randomOffset.z *
-            parallaxFactor;
-
-        // rotation
-        plane.rotation.x =
+        mesh.rotation.x =
           baseRotation.x +
           -mouse.current.targetY * rotationModifier.x * mouseDistance +
           Math.sin(time + phaseOffset) * rotationModifier.x * 0.2;
-        plane.rotation.y =
+        mesh.rotation.y =
           baseRotation.y +
           mouse.current.targetX * rotationModifier.y * mouseDistance +
           Math.sin(time + phaseOffset) * rotationModifier.y * 0.2;
-        plane.rotation.z =
-          baseRotation.z +
-          mouse.current.targetX *
-            -mouse.current.targetY *
-            rotationModifier.z *
-            2 +
-          Math.sin(time + phaseOffset) * rotationModifier.z * 0.3;
-
-        if (plane.userData.video.readyState >= 2)
-          plane.material.map.needsUpdate = true;
-      });
+      }
 
       camera.lookAt(lookAtTarget.current);
       renderer.render(scene, camera);
     };
+
     animate();
 
     // --- Resize ---
@@ -152,8 +262,14 @@ export default function useThreeScene(videos, options = {}) {
     // --- Cleanup ---
     return () => {
       window.removeEventListener("resize", handleResize);
-      planes.forEach((plane) => plane.userData.video.pause());
+      planes.forEach((plane) => {
+        const videoEl = plane.userData.videoEl;
+        if (videoEl) videoEl.pause();
+        plane.geometry.dispose();
+        plane.material.dispose();
+      });
       renderer.dispose();
+      mountRef.current?.removeChild(renderer.domElement);
     };
   }, [videos]);
 
