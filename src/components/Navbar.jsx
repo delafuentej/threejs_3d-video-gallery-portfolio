@@ -3,7 +3,7 @@ import React from "react";
 const Navbar = () => {
   return (
     <nav className="navbar">
-      <p>3D-VIDEO-GALLERY-PORTFOLIO</p>
+      <h1>3D-VIDEO-GALLERY-PORTFOLIO</h1>
     </nav>
   );
 };

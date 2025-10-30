@@ -1,8 +1,9 @@
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
+import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import useMouseParallax from "./useMouseParallax";
 import { isObjectVisible, createVideoPlane } from "../utils/";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 
 import { baseParams } from "../constants";
 
@@ -45,7 +46,7 @@ export default function useThreeScene(videos, options = {}) {
     // --- Environment Map HDRI ---
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
-      "/textures/environmentMap/futuristic_cyberpunk_corridor1.hdr", // ruta a tu HDR
+      "/textures/environmentMap/hdri-skies.hdr", // ruta a tu HDR
       (environmentMap) => {
         environmentMap.mapping = THREE.EquirectangularReflectionMapping;
         scene.background = environmentMap; // muestra el HDR como fondo

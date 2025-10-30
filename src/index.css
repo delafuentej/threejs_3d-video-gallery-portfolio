@@ -9,32 +9,19 @@
   body {
     @apply w-full h-full  overflow-hidden;
   }
-
-  .canvas {
-    @apply fixed top-0 left-0 w-full h-full z-0;
-  }
 }
 
 @layer components {
-  .nav {
-    @apply fixed  top-0 left-0 w-screen p-8 flex justify-center z-20;
+  nav {
+    @apply fixed flex justify-center items-center w-full  z-2 top-0  text-[16px] px-1 font-semibold bg-transparent;
+
+    h1 {
+      @apply uppercase leading-none tracking-tight  text-[#d4f70c] text-center;
+    }
   }
 
-  nav p {
-    @apply uppercase font-semibold text-[12px] px-1 bg-[#d4f70c] text-center;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-family: "Akkurat Trial TT", sans-serif;
-    transform-style: preserve-3d;
-    perspective: 1000px;
-    will-change: transform;
-  }
-
-  h1 {
-    @apply uppercase leading-none tracking-tight;
-  }
   .footer {
-    @apply fixed flex justify-center  w-full  z-2 bottom-0 font-semibold text-[12px] px-1 bg-[#d4f70c];
+    @apply fixed flex justify-center  w-full  z-2 bottom-0 font-semibold text-[12px] px-1 text-[#d4f70c] bg-transparent;
 
     p {
       @apply text-center;
