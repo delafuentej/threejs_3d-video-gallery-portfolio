@@ -1,8 +1,9 @@
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
-import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
+// import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import useMouseParallax from "./useMouseParallax";
+import createHologram from "../three/createHologram";
 import { isObjectVisible, createVideoPlane } from "../utils/";
 
 import { baseParams } from "../constants";
@@ -43,10 +44,32 @@ export default function useThreeScene(videos, options = {}) {
     cameraRef.current = camera;
     rendererRef.current = renderer;
 
+    // --- LIghts ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Luz direccional (simula el sol)
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(10, 10, 10);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+
+    // Luz puntual opcional (resalta desde un punto)
+    const pointLight = new THREE.PointLight(0xffaa00, 0.5, 100);
+    pointLight.position.set(0, 10, 10);
+    scene.add(pointLight);
+
+    // --- Create Hologram ---
+    // Crear y agregar el holograma
+
+    // --- Holograma ---
+    const { group: hologram, update: updateParticles } = createHologram();
+    scene.add(hologram);
+
     // --- Environment Map HDRI ---
     const rgbeLoader = new RGBELoader();
     rgbeLoader.load(
-      "/textures/environmentMap/hdri-skies.hdr", // ruta a tu HDR
+      "/textures/environmentMap/night_environment.hdr", // ruta a tu HDR
       (environmentMap) => {
         environmentMap.mapping = THREE.EquirectangularReflectionMapping;
         scene.background = environmentMap; // muestra el HDR como fondo
@@ -114,92 +137,6 @@ export default function useThreeScene(videos, options = {}) {
     const targetFPS = 30; // ⚙️ ajusta si quieres más fluidez
     const frameInterval = 1 / targetFPS;
 
-    // const animate = () => {
-    // requestAnimationFrame(animate);
-    // if (document.hidden) return; // ⚙️ pausa si pestaña inactiva
-
-    // const delta = clock.getDelta();
-    // lastRenderTime += delta;
-    // if (lastRenderTime < frameInterval) return;
-    // lastRenderTime = 0;
-
-    // updateTarget();
-
-    // for (const mesh of planes) {
-    // const visible = isObjectVisible(camera, mesh);
-    // mesh.visible = visible;
-
-    // const videoEl = mesh.userData.videoEl;
-    // if (!videoEl) continue;
-
-    // if (visible) {
-    // if (videoEl.paused) videoEl.play().catch(() => {});
-    // } else {
-    // if (!videoEl.paused) videoEl.pause();
-    // }
-
-    // Solo actualizar textura si el frame cambia
-    // if (videoEl.readyState >= 2) {
-    // const currentTimeSec = Math.floor(videoEl.currentTime * 10) / 10; // redondea a 0.1s
-    // if (currentTimeSec !== mesh.userData.lastFrameTime) {
-    // mesh.material.map.needsUpdate = true;
-    // mesh.userData.lastFrameTime = currentTimeSec;
-    // }
-    // }
-    // if (
-    // videoEl.readyState >= 2 &&
-    // videoEl.currentTime !== mesh.userData.lastFrameTime
-    // ) {
-    // mesh.userData.lastFrameTime = videoEl.currentTime;
-    // mesh.material.map.needsUpdate = true;
-    // }
-
-    // --- Movimiento parallax ---
-    // const {
-    // basePosition,
-    // baseRotation,
-    // parallaxFactor,
-    // randomOffset,
-    // rotationModifier,
-    // phaseOffset,
-    // } = mesh.userData;
-    // const data = mesh.userData || {};
-    // const basePosition = data.basePosition || { x: 0, y: 0, z: 0 };
-    // const baseRotation = data.baseRotation || { x: 0, y: 0, z: 0 };
-    // const parallaxFactor = data.parallaxFactor ?? 0;
-    // const randomOffset = data.randomOffset || { x: 1, y: 1, z: 1 };
-    // const rotationModifier = data.rotationModifier || { x: 0, y: 0, z: 0 };
-    // const phaseOffset = data.phaseOffset ?? 0;
-
-    // const mouseDistance = Math.sqrt(
-    // mouse.current.targetX ** 2 + mouse.current.targetY ** 2
-    // );
-    // const time = performance.now() * 0.001;
-
-    // mesh.position.x =
-    // basePosition.x +
-    // mouse.current.targetX * parallaxFactor * 3 * randomOffset.x +
-    // Math.sin(time + phaseOffset) * mouseDistance * 0.1 * randomOffset.x;
-
-    // mesh.position.y =
-    // basePosition.y +
-    // -mouse.current.targetY * parallaxFactor * 3 * randomOffset.y +
-    // Math.sin(time + phaseOffset) * mouseDistance * 0.1 * randomOffset.y;
-
-    // mesh.rotation.x =
-    // baseRotation.x +
-    // -mouse.current.targetY * rotationModifier.x * mouseDistance +
-    // Math.sin(time + phaseOffset) * rotationModifier.x * 0.2;
-
-    // mesh.rotation.y =
-    // baseRotation.y +
-    // mouse.current.targetX * rotationModifier.y * mouseDistance +
-    // Math.sin(time + phaseOffset) * rotationModifier.y * 0.2;
-    // }
-
-    // camera.lookAt(lookAtTarget.current);
-    // renderer.render(scene, camera);
-    // };
     const animate = () => {
       requestAnimationFrame(animate);
       if (document.hidden) return;
@@ -291,5 +228,5 @@ export default function useThreeScene(videos, options = {}) {
     };
   }, [videos]);
 
-  return { mountRef };
+  return { mountRef, scene: sceneRef.current };
 }

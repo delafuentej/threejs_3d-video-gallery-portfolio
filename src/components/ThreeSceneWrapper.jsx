@@ -1,5 +1,6 @@
 import React from "react";
 import useThreeScene from "../hooks/useThreeScene";
+
 import { projectsVideos } from "../constants";
 
 export default function ThreeSceneWrapper() {
@@ -9,7 +10,7 @@ export default function ThreeSceneWrapper() {
     spacing: 10,
     imageWidth: 7,
     imageHeight: 4.5,
-    depth: 7.5,
+    depth: 20,
     elevation: 0,
     lookAtRange: 20,
     curvature: 5,
