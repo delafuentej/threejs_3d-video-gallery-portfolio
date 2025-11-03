@@ -38,7 +38,7 @@ void main(){
    
 
     //Final color
-    gl_FragColor = vec4(uColor, holographic);
+   gl_FragColor = vec4(uColor, holographic);
     // gl_FragColor = vec4(vNormal, 1.0);
 
     // #include <tonemapping_fragment>

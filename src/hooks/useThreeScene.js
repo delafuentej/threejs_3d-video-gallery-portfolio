@@ -1,10 +1,15 @@
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
-// import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import useMouseParallax from "./useMouseParallax";
 import createHologram from "../three/createHologram";
-import { isObjectVisible, createVideoPlane } from "../utils/";
+import {
+  isObjectVisible,
+  createVideoPlane,
+  applyHolographicShader,
+  updateHolographicTime,
+} from "../utils/";
 
 import { baseParams } from "../constants";
 
@@ -32,7 +37,7 @@ export default function useThreeScene(videos, options = {}) {
     camera.position.set(0, 0, 40);
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: false, // ⚙️ reduce carga GPU
+      antialias: false,
       powerPreference: "high-performance",
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -48,38 +53,90 @@ export default function useThreeScene(videos, options = {}) {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    // Luz direccional (simula el sol)
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(10, 10, 10);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    // Luz puntual opcional (resalta desde un punto)
     const pointLight = new THREE.PointLight(0xffaa00, 0.5, 100);
     pointLight.position.set(0, 10, 10);
     scene.add(pointLight);
-
-    // --- Create Hologram ---
-    // Crear y agregar el holograma
 
     // --- Holograma ---
     const { group: hologram, update: updateParticles } = createHologram();
     scene.add(hologram);
 
-    // --- Environment Map HDRI ---
-    const rgbeLoader = new RGBELoader();
-    rgbeLoader.load(
-      "/textures/environmentMap/night_environment.hdr", // ruta a tu HDR
-      (environmentMap) => {
-        environmentMap.mapping = THREE.EquirectangularReflectionMapping;
-        scene.background = environmentMap; // muestra el HDR como fondo
-        scene.environment = environmentMap; // aplica iluminación basada en HDR
+    // Asegúrate de que el holograma esté visible
+    console.log("Holograma creado:", hologram);
+    console.log("Posición del holograma:", hologram.position);
+    console.log("Hijos del holograma:", hologram.children.length);
+
+    // --- Cargar Modelo 3D ---
+    const gltfLoader = new GLTFLoader();
+
+    let model3D = null;
+    let holographicMaterials = null;
+
+    gltfLoader.load(
+      "/models/3d-computers-text.glb", // 🔴 Cambia esto a la ruta de tu modelo
+      (gltf) => {
+        model3D = gltf.scene;
+
+        // Ajustar posición y escala
+        model3D.position.set(-18, 0, -5);
+        model3D.scale.set(20, 20, 20); // Ajusta si es necesario
+
+        // const helper = new THREE.BoxHelper(model3D, 0xff0000);
+        // scene.add(helper);
+
+        //   ⭐ AQUÍ SE APLICA EL SHADER
+        // holographicMaterials = applyHolographicShader(
+        // model3D, // El modelo cargado
+        // new THREE.Color(0xff0000) // Color del holograma
+        // );
+
+        // console.log("✅ Shader aplicado al modelo:", model3D);
+        // Asegurar que tenga materiales visibles
+        // model3D.traverse((child) => {
+        // if (child.isMesh) {
+        // child.castShadow = true;
+        // child.receiveShadow = true;
+        //    Si el material no se ve, descomenta esto:
+        // child.material.needsUpdate = true;
+        // }
+        // });
+
+        scene.add(model3D);
+
+        console.log("✅ Modelo 3D cargado:", model3D);
       },
-      undefined,
+      (progress) => {
+        console.log(
+          `Cargando modelo: ${(
+            (progress.loaded / progress.total) *
+            100
+          ).toFixed(2)}%`
+        );
+      },
       (error) => {
-        console.error("❌ Error al cargar HDRI:", error);
+        console.error("❌ Error cargando modelo 3D:", error);
       }
     );
+
+    // --- Environment Map HDRI ---
+    // const rgbeLoader = new RGBELoader();
+    // rgbeLoader.load(
+    // "/textures/environmentMap/night_environment.hdr",
+    // (environmentMap) => {
+    // environmentMap.mapping = THREE.EquirectangularReflectionMapping;
+    // scene.background = environmentMap;
+    // scene.environment = environmentMap;
+    // },
+    // undefined,
+    // (error) => {
+    // console.error("❌ Error al cargar HDRI:", error);
+    // }
+    // );
 
     // --- Helper functions ---
     const calculateRotations = (x, y) => {
@@ -134,7 +191,7 @@ export default function useThreeScene(videos, options = {}) {
     // --- Animation loop ---
     const clock = new THREE.Clock();
     let lastRenderTime = 0;
-    const targetFPS = 30; // ⚙️ ajusta si quieres más fluidez
+    const targetFPS = 30;
     const frameInterval = 1 / targetFPS;
 
     const animate = () => {
@@ -146,7 +203,18 @@ export default function useThreeScene(videos, options = {}) {
       if (lastRenderTime < frameInterval) return;
       lastRenderTime = 0;
 
+      if (holographicMaterials && holographicMaterials.length) {
+        holographicMaterials.forEach((mat) =>
+          updateHolographicTime(mat, delta)
+        );
+      }
+
       updateTarget();
+
+      // ⭐ AQUÍ: Actualiza el holograma en cada frame
+      if (updateParticles) {
+        updateParticles(delta);
+      }
 
       const mouseDistance = Math.sqrt(
         mouse.current.targetX ** 2 + mouse.current.targetY ** 2
@@ -157,13 +225,12 @@ export default function useThreeScene(videos, options = {}) {
         const visible = isObjectVisible(camera, mesh);
         mesh.visible = visible;
 
-        if (!visible) continue; // ⚡ solo procesar visibles
+        if (!visible) continue;
 
         const videoEl = mesh.userData.videoEl;
         if (videoEl) {
           if (videoEl.paused) videoEl.play().catch(() => {});
 
-          // solo actualizar textura si avanzó 0.1s
           if (videoEl.readyState >= 2) {
             const currentTimeSec = Math.floor(videoEl.currentTime * 10) / 10;
             if (currentTimeSec !== mesh.userData.lastFrameTime) {

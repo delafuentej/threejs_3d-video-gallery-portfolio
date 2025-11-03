@@ -34,5 +34,7 @@ void main(){
 
     //Varyings
     vPosition = modelPosition.xyz;
+   // vPosition = (modelMatrix * vec4(position, 1.0)).xyz / 10.0;
+
     vNormal = modelNormal.xyz;
 }

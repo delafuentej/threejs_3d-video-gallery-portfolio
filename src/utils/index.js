@@ -9,8 +9,14 @@ import {
   Mesh,
   Frustum,
   Matrix4,
+  ShaderMaterial,
+  AdditiveBlending,
+  NormalBlending,
+  Color,
   //RGBFormat,
 } from "three";
+import holographicVertexShader from "../shaders/holographic/vertex.glsl";
+import holographicFragmentShader from "../shaders/holographic/fragment.glsl";
 
 /**
  * Crea y devuelve un THREE.Mesh que usa un <video> (HLS si procede) como textura.
@@ -93,6 +99,103 @@ function isObjectVisible(camera, object) {
   // "⚠️ No se pudo configurar el frustum: verifica tu versión de Three.js"
   // );
   //}
+}
+
+export function createHolographicMaterial(color = new Color(0x70c1ff)) {
+  return new ShaderMaterial({
+    vertexShader: holographicVertexShader,
+    fragmentShader: holographicFragmentShader,
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: color },
+    },
+    transparent: true,
+    side: DoubleSide,
+    depthWrite: false,
+    blending: AdditiveBlending,
+  });
+}
+
+export function applyHolographicShader(model, color = new Color(0x70c1ff)) {
+  //Crea un material por mesh para evitar problemas de geometrías compartidas
+  const materials = [];
+
+  model.traverse((child) => {
+    if (child.isMesh) {
+      //Asegura que tiene normales (importante para iluminación o gradientes)
+      if (!child.geometry.attributes.normal) {
+        child.geometry.computeVertexNormals();
+      }
+      //Verifica UVs
+      if (!child.geometry.attributes.uv) {
+        console.warn(
+          `⚠️ Mesh "${child.name}" no tiene UVs. El shader puede no renderizar correctamente.`
+        );
+      }
+
+      const holoMat = createHolographicMaterial(color);
+
+      // Copia UVs si existen (para evitar errores de shader)
+      if (!child.geometry.attributes.uv) {
+        console.warn("Mesh sin UV:", child.name);
+      }
+
+      //Reemplaza uno o varios materiales previos
+      if (Array.isArray(child.material)) {
+        child.material.forEach(() => {
+          materials.push(holoMat);
+        });
+      } else {
+        materials.push(holoMat);
+      }
+
+      child.material = holoMat;
+      child.material.needsUpdate = true;
+      child.castShadow = true;
+      child.receiveShadow = true;
+
+      materials.push(holoMat);
+      console.log("materials", materials);
+    }
+  });
+
+  //Devuelve un arreglo de materiales para poder actualizar uTime en todos
+  return materials;
+}
+// export function applyHolographicShader(model, color = new Color(0x70c1ff)) {
+// const materials = [];
+//
+// model.traverse((child) => {
+//   🔹 Verifica si es un Mesh real (tiene geometría y material)
+// if (child.isMesh && child.geometry) {
+// const holoMat = createHolographicMaterial(color);
+//
+//  Si hay múltiples materiales (típico en Sketchfab), reemplázalos todos
+// if (Array.isArray(child.material)) {
+// child.material = child.material.map(() => holoMat.clone());
+// } else {
+// child.material = holoMat;
+// }
+//
+// child.material.needsUpdate = true;
+// materials.push(holoMat);
+//
+// console.log("✅ Shader aplicado a:", child.name || "(sin nombre)");
+// }
+// });
+//
+// if (materials.length === 0) {
+// console.warn("⚠️ No se encontró ningún Mesh dentro del modelo.");
+// }
+//
+// return materials;
+// }
+
+export function updateHolographicTime(materials, delta) {
+  if (!materials) return;
+  (Array.isArray(materials) ? materials : [materials]).forEach((mat) => {
+    if (mat.uniforms?.uTime) mat.uniforms.uTime.value += delta;
+  });
 }
 
 export { createVideoPlane, isObjectVisible };
