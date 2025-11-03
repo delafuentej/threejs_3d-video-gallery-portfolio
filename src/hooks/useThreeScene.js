@@ -132,20 +132,20 @@ export default function useThreeScene(videos, options = {}) {
       }
     );
 
-    // --- Environment Map HDRI ---
-    // const rgbeLoader = new RGBELoader();
-    // rgbeLoader.load(
-    // "/textures/environmentMap/night_environment.hdr",
-    // (environmentMap) => {
-    // environmentMap.mapping = THREE.EquirectangularReflectionMapping;
-    // scene.background = environmentMap;
-    // scene.environment = environmentMap;
-    // },
-    // undefined,
-    // (error) => {
-    // console.error("❌ Error al cargar HDRI:", error);
-    // }
-    // );
+    //  --- Environment Map HDRI ---
+    const rgbeLoader = new RGBELoader();
+    rgbeLoader.load(
+      "/textures/environmentMap/night_environment.hdr",
+      (environmentMap) => {
+        environmentMap.mapping = THREE.EquirectangularReflectionMapping;
+        scene.background = environmentMap;
+        scene.environment = environmentMap;
+      },
+      undefined,
+      (error) => {
+        console.error("❌ Error al cargar HDRI:", error);
+      }
+    );
 
     // --- Helper functions ---
     const calculateRotations = (x, y) => {
