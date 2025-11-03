@@ -83,7 +83,7 @@ export default function useThreeScene(videos, options = {}) {
         model3D = gltf.scene;
 
         // Ajustar posición y escala
-        model3D.position.set(-18, 0, -5);
+        model3D.position.set(-20, 0, -5);
         model3D.scale.set(20, 20, 20); // Ajusta si es necesario
 
         // const helper = new THREE.BoxHelper(model3D, 0xff0000);
@@ -105,6 +105,15 @@ export default function useThreeScene(videos, options = {}) {
         // child.material.needsUpdate = true;
         // }
         // });
+
+        model3D.traverse((child) => {
+          if (child.isMesh) {
+            child.material.transparent = true; // habilitar transparencia
+            child.material.opacity = 0.35; // ajustar opacidad
+            child.material.depthWrite = false; // opcional para evitar conflictos
+            child.material.needsUpdate = true; // actualizar material
+          }
+        });
 
         scene.add(model3D);
 
