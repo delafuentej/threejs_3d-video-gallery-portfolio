@@ -1,12 +1,15 @@
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { FontLoader } from "three/addons/loaders/FontLoader.js";
+import { Text } from "troika-three-text";
+import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
 import useMouseParallax from "./useMouseParallax";
 import createHologram from "../three/createHologram";
 import {
   isObjectVisible,
   createVideoPlane,
+  loadModel,
   applyHolographicShader,
   updateHolographicTime,
 } from "../utils/";
@@ -19,6 +22,7 @@ export default function useThreeScene(videos, options = {}) {
   const cameraRef = useRef();
   const rendererRef = useRef();
   const planesRef = useRef([]);
+  const mixersRef = useRef([]);
 
   const { mouse, lookAtTarget, updateTarget } = useMouseParallax();
   const params = { ...baseParams, ...options };
@@ -58,9 +62,18 @@ export default function useThreeScene(videos, options = {}) {
     directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    const pointLight = new THREE.PointLight(0xffaa00, 0.5, 100);
-    pointLight.position.set(0, 10, 10);
-    scene.add(pointLight);
+    const pointLight1 = new THREE.PointLight(0xffaa00, 0.5, 100);
+    pointLight1.position.set(0, 10, 10);
+    scene.add(pointLight1);
+
+    const spotLight = new THREE.SpotLight(0x00ffff, 3, 50, Math.PI / 6, 0.3, 1);
+    spotLight.position.set(15, 2, 0);
+    spotLight.target.position.set(15, 0, -5); // 🔹 apunta al modelo
+    scene.add(spotLight);
+    scene.add(spotLight.target);
+
+    // sombra opcional
+    spotLight.castShadow = true;
 
     // --- Holograma ---
     const { group: hologram, update: updateParticles } = createHologram();
@@ -72,65 +85,119 @@ export default function useThreeScene(videos, options = {}) {
     console.log("Hijos del holograma:", hologram.children.length);
 
     // --- Cargar Modelo 3D ---
-    const gltfLoader = new GLTFLoader();
 
-    let model3D = null;
-    let holographicMaterials = null;
+    // let screens3D = null;
+    //let holographicMaterials = null;
 
-    gltfLoader.load(
-      "/models/3d-computers-text.glb", // 🔴 Cambia esto a la ruta de tu modelo
-      (gltf) => {
-        model3D = gltf.scene;
-
-        // Ajustar posición y escala
-        model3D.position.set(-20, 0, -5);
-        model3D.scale.set(20, 20, 20); // Ajusta si es necesario
-
-        // const helper = new THREE.BoxHelper(model3D, 0xff0000);
-        // scene.add(helper);
-
-        //   ⭐ AQUÍ SE APLICA EL SHADER
-        // holographicMaterials = applyHolographicShader(
-        // model3D, // El modelo cargado
-        // new THREE.Color(0xff0000) // Color del holograma
-        // );
-
-        // console.log("✅ Shader aplicado al modelo:", model3D);
-        // Asegurar que tenga materiales visibles
-        // model3D.traverse((child) => {
-        // if (child.isMesh) {
-        // child.castShadow = true;
-        // child.receiveShadow = true;
-        //    Si el material no se ve, descomenta esto:
-        // child.material.needsUpdate = true;
-        // }
-        // });
-
-        model3D.traverse((child) => {
-          if (child.isMesh) {
-            child.material.transparent = true; // habilitar transparencia
-            child.material.opacity = 0.35; // ajustar opacidad
-            child.material.depthWrite = false; // opcional para evitar conflictos
-            child.material.needsUpdate = true; // actualizar material
-          }
+    async function loadModels() {
+      try {
+        // Modelo 3D estático
+        const screens3D = await loadModel({
+          url: "/models/3d-computers-text.glb",
+          scene,
+          position: [-20, 0, -5],
+          scale: [20, 20, 20],
         });
 
-        scene.add(model3D);
+        // Modelo 3D animado
+        // const { model: holoEarthModel } = await loadModel({
+        // url: "/models/holo-earth2.glb",
+        // scene,
+        // position: [17, 0, -5],
+        // scale: [7, 7, 7],
+        // rotation: [0, Math.PI, Math.PI / 2],
+        // });
 
-        console.log("✅ Modelo 3D cargado:", model3D);
-      },
-      (progress) => {
-        console.log(
-          `Cargando modelo: ${(
-            (progress.loaded / progress.total) *
-            100
-          ).toFixed(2)}%`
-        );
-      },
-      (error) => {
-        console.error("❌ Error cargando modelo 3D:", error);
+        // holoEarthRef.current = holoEarthModel;
+
+        //      if (mixer) mixersRef.current.push(mixer);
+      } catch (error) {
+        console.error("Error cargando modelos:", error);
       }
-    );
+    }
+
+    loadModels();
+
+    // const screens3D = loadModel({
+    // url: "/models/3d-computers-text.glb",
+    // scene,
+    // position: [-20, 0, -5],
+    // scale: [20, 20, 20],
+
+    //  shader: applyHolographicShader,
+    // });
+
+    // let holographicMaterials = null;
+
+    // let holoEarth = loadModel({
+    // url: "/models/holo-earth.glb",
+    // scene,
+    // position: [20, 0, -5],
+    // scale: [10, 10, 10],
+    // onLoad: (model) =>
+    // (holographicMaterials = applyHolographicShader(
+    // model,
+    // new THREE.Color(0x00897b)
+    // )),
+    // }).then(({ mixer }) => {
+    // if (mixer) mixersRef.current.push(mixer);
+    // });
+    // }, []);
+
+    // gltfLoader.load(
+    // "/models/3d-computers-text.glb", // 🔴 Cambia esto a la ruta de tu modelo
+    // (gltf) => {
+    // screens3D = gltf.scene;
+
+    // Ajustar posición y escala
+    // screens3D.position.set(-20, 0, -5);
+    // screens3D.scale.set(20, 20, 20); // Ajusta si es necesario
+
+    // const helper = new THREE.BoxHelper(model3D, 0xff0000);
+    // scene.add(helper);
+
+    //   ⭐ AQUÍ SE APLICA EL SHADER
+    // holographicMaterials = applyHolographicShader(
+    // model3D, // El modelo cargado
+    // new THREE.Color(0xff0000) // Color del holograma
+    // );
+
+    // console.log("✅ Shader aplicado al modelo:", model3D);
+    // Asegurar que tenga materiales visibles
+    //  model3D.traverse((child) => {
+    // if (child.isMesh) {
+    // child.castShadow = true;
+    // child.receiveShadow = true;
+    //  Si el material no se ve, descomenta esto:
+    // child.material.needsUpdate = true;
+    // }
+    // });
+
+    // screens3D.traverse((child) => {
+    // if (child.isMesh) {
+    // child.material.transparent = true; // habilitar transparencia
+    // child.material.opacity = 0.35; // ajustar opacidad
+    // child.material.depthWrite = false; // opcional para evitar conflictos
+    // child.material.needsUpdate = true; // actualizar material
+    // }
+    // });
+
+    // scene.add(screens3D);
+
+    // console.log("✅ Modelo 3D cargado:", screens3D);
+    // },
+    // (progress) => {
+    // console.log(
+    // `Cargando modelo: ${(
+    // (progress.loaded / progress.total) *
+    // 100
+    // ).toFixed(2)}%`
+    // );
+    // },
+    // (error) => {
+    // console.error("❌ Error cargando modelo 3D:", error);
+    // }
+    // );
 
     //  --- Environment Map HDRI ---
     const rgbeLoader = new RGBELoader();
@@ -146,6 +213,52 @@ export default function useThreeScene(videos, options = {}) {
         console.error("❌ Error al cargar HDRI:", error);
       }
     );
+
+    // TEXTURES
+    const textureLoader = new THREE.TextureLoader();
+    const matcapTexture = textureLoader.load("/textures/matcaps/1.png");
+    matcapTexture.colorSpace = THREE.SRGBColorSpace;
+
+    //fonts
+    const fontLoader = new FontLoader();
+
+    fontLoader.load("/fonts/helvetiker_regular.typeface.json", (font) => {
+      console.log(font);
+      const textGeometry = new TextGeometry(
+        "delafuente",
+
+        {
+          font: font,
+          size: 0.7,
+          height: 0.2,
+          curveSegments: 6,
+          bevelEnabled: true,
+          bevelThickness: 0.03,
+          bevelSize: 0.02,
+          bevelOffset: 0,
+          bevelSegments: 3,
+        }
+      );
+      const material = new THREE.MeshMatcapMaterial();
+      material.matcap = matcapTexture;
+      material.transparent = true;
+      material.opacity = 0.8;
+      //textMaterial.wireframe = true;
+      const text = new THREE.Mesh(textGeometry, material);
+      text.position.set(-2, 1, 0);
+
+      scene.add(text);
+    });
+
+    const textMesh = new Text();
+    textMesh.text = "Creative Developer";
+    textMesh.fontSize = 1;
+    textMesh.position.set(-5, 3, -4);
+    textMesh.color = 0x00ffff;
+    textMesh.font = "/fonts/Orbitron-VariableFont_wght.ttf"; // fuente TTF u OTF en tu carpeta public
+    textMesh.sync(); // importante: genera la geometría
+
+    scene.add(textMesh);
 
     // --- Helper functions ---
     const calculateRotations = (x, y) => {
@@ -207,16 +320,16 @@ export default function useThreeScene(videos, options = {}) {
       requestAnimationFrame(animate);
       if (document.hidden) return;
 
-      const delta = clock.getDelta();
+      const delta = clock.getElapsedTime();
       lastRenderTime += delta;
       if (lastRenderTime < frameInterval) return;
       lastRenderTime = 0;
 
-      if (holographicMaterials && holographicMaterials.length) {
-        holographicMaterials.forEach((mat) =>
-          updateHolographicTime(mat, delta)
-        );
-      }
+      // if (holographicMaterials && holographicMaterials.length) {
+      // holographicMaterials.forEach((mat) =>
+      // updateHolographicTime(mat, delta)
+      // );
+      // }
 
       updateTarget();
 
@@ -276,6 +389,8 @@ export default function useThreeScene(videos, options = {}) {
           Math.sin(time + phaseOffset) * rotationModifier.y * 0.2;
       }
 
+      if (mixersRef.current.length > 0)
+        mixersRef.current.forEach((mixer) => mixer.update(delta));
       camera.lookAt(lookAtTarget.current);
       renderer.render(scene, camera);
     };

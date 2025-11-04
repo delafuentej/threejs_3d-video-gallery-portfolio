@@ -13,8 +13,10 @@ import {
   AdditiveBlending,
   NormalBlending,
   Color,
+  AnimationMixer,
   //RGBFormat,
 } from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import holographicVertexShader from "../shaders/holographic/vertex.glsl";
 import holographicFragmentShader from "../shaders/holographic/fragment.glsl";
 
@@ -99,6 +101,43 @@ function isObjectVisible(camera, object) {
   // "⚠️ No se pudo configurar el frustum: verifica tu versión de Three.js"
   // );
   //}
+}
+
+export function loadModel({
+  url,
+  scene,
+  position = [0, 0, 0],
+  scale = [1, 1, 1],
+  rotation = [0, 0, 0],
+  shader = null,
+}) {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load(
+      url,
+      (gltf) => {
+        const model = gltf.scene;
+        model.position.set(...position);
+        model.scale.set(...scale);
+        model.rotation.set(...rotation);
+
+        let mixer = null;
+        if (gltf.animations && gltf.animations.length) {
+          mixer = new AnimationMixer(model);
+          gltf.animations.forEach((clip) => {
+            mixer.clipAction(clip).play();
+          });
+        }
+
+        if (shader) shader(model);
+
+        scene.add(model);
+        resolve({ model, mixer });
+      },
+      undefined,
+      (err) => reject(err)
+    );
+  });
 }
 
 export function createHolographicMaterial(color = new Color(0x70c1ff)) {
