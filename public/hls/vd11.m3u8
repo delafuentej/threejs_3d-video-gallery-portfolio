@@ -1,13 +1,3 @@
-#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-TARGETDURATION:13
-#EXT-X-MEDIA-SEQUENCE:0
-#EXTINF:12.546667,
-vd110.ts
-#EXTINF:9.000000,
-vd111.ts
-#EXTINF:9.106667,
-vd112.ts
-#EXTINF:1.573333,
-vd113.ts
-#EXT-X-ENDLIST
+version https://git-lfs.github.com/spec/v1
+oid sha256:ea96fe58011ba52e4b269c1f1c466b040d7c98bbbf2c5aea16303ece4bc13a9d
+size 198
