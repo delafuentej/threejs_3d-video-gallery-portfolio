@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import * as THREE from "three";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { FontLoader } from "three/addons/loaders/FontLoader.js";
 import { Text } from "troika-three-text";
 import { TextGeometry } from "three/examples/jsm/geometries/TextGeometry.js";
@@ -23,6 +24,7 @@ export default function useThreeScene(videos, options = {}) {
   const rendererRef = useRef();
   const planesRef = useRef([]);
   const mixersRef = useRef([]);
+  const holoEarthRef = useRef(null);
 
   const { mouse, lookAtTarget, updateTarget } = useMouseParallax();
   const params = { ...baseParams, ...options };
@@ -92,25 +94,30 @@ export default function useThreeScene(videos, options = {}) {
     async function loadModels() {
       try {
         // Modelo 3D estático
-        const screens3D = await loadModel({
+        const { model: screens3D } = await loadModel({
           url: "/models/3d-computers-text.glb",
           scene,
           position: [-20, 0, -5],
           scale: [20, 20, 20],
+          materialOptions: {
+            transparent: true,
+            opacity: 0.2,
+            depthWrite: false,
+          },
         });
 
-        // Modelo 3D animado
-        // const { model: holoEarthModel } = await loadModel({
-        // url: "/models/holo-earth2.glb",
-        // scene,
-        // position: [17, 0, -5],
-        // scale: [7, 7, 7],
-        // rotation: [0, Math.PI, Math.PI / 2],
-        // });
-
-        // holoEarthRef.current = holoEarthModel;
-
-        //      if (mixer) mixersRef.current.push(mixer);
+        const { model: holoEarthModel } = await loadModel({
+          url: "/models/earth-globe-hoogram.glb",
+          scene,
+          position: [15, -5, 0],
+          scale: [10, 10, 10],
+          rotation: [THREE.MathUtils.degToRad(23.5), Math.PI / 2, 0],
+          materialOptions: {
+            transparent: true,
+            opacity: 0.5,
+            depthWrite: false,
+          },
+        });
       } catch (error) {
         console.error("Error cargando modelos:", error);
       }
@@ -118,91 +125,11 @@ export default function useThreeScene(videos, options = {}) {
 
     loadModels();
 
-    // const screens3D = loadModel({
-    // url: "/models/3d-computers-text.glb",
-    // scene,
-    // position: [-20, 0, -5],
-    // scale: [20, 20, 20],
-
-    //  shader: applyHolographicShader,
-    // });
-
-    // let holographicMaterials = null;
-
-    // let holoEarth = loadModel({
-    // url: "/models/holo-earth.glb",
-    // scene,
-    // position: [20, 0, -5],
-    // scale: [10, 10, 10],
-    // onLoad: (model) =>
-    // (holographicMaterials = applyHolographicShader(
-    // model,
-    // new THREE.Color(0x00897b)
-    // )),
-    // }).then(({ mixer }) => {
-    // if (mixer) mixersRef.current.push(mixer);
-    // });
-    // }, []);
-
-    // gltfLoader.load(
-    // "/models/3d-computers-text.glb", // 🔴 Cambia esto a la ruta de tu modelo
-    // (gltf) => {
-    // screens3D = gltf.scene;
-
-    // Ajustar posición y escala
-    // screens3D.position.set(-20, 0, -5);
-    // screens3D.scale.set(20, 20, 20); // Ajusta si es necesario
-
-    // const helper = new THREE.BoxHelper(model3D, 0xff0000);
-    // scene.add(helper);
-
-    //   ⭐ AQUÍ SE APLICA EL SHADER
-    // holographicMaterials = applyHolographicShader(
-    // model3D, // El modelo cargado
-    // new THREE.Color(0xff0000) // Color del holograma
-    // );
-
-    // console.log("✅ Shader aplicado al modelo:", model3D);
-    // Asegurar que tenga materiales visibles
-    //  model3D.traverse((child) => {
-    // if (child.isMesh) {
-    // child.castShadow = true;
-    // child.receiveShadow = true;
-    //  Si el material no se ve, descomenta esto:
-    // child.material.needsUpdate = true;
-    // }
-    // });
-
-    // screens3D.traverse((child) => {
-    // if (child.isMesh) {
-    // child.material.transparent = true; // habilitar transparencia
-    // child.material.opacity = 0.35; // ajustar opacidad
-    // child.material.depthWrite = false; // opcional para evitar conflictos
-    // child.material.needsUpdate = true; // actualizar material
-    // }
-    // });
-
-    // scene.add(screens3D);
-
-    // console.log("✅ Modelo 3D cargado:", screens3D);
-    // },
-    // (progress) => {
-    // console.log(
-    // `Cargando modelo: ${(
-    // (progress.loaded / progress.total) *
-    // 100
-    // ).toFixed(2)}%`
-    // );
-    // },
-    // (error) => {
-    // console.error("❌ Error cargando modelo 3D:", error);
-    // }
-    // );
-
     //  --- Environment Map HDRI ---
-    const rgbeLoader = new RGBELoader();
-    rgbeLoader.load(
-      "/textures/environmentMap/night_environment.hdr",
+    // const rgbeLoader = new RGBELoader();
+    const exrLoader = new EXRLoader();
+    exrLoader.load(
+      "/textures/environmentMap/black-white-light-studio_2K_b08ca9ac-12a4-421c-b47f-63b5782b56ed.exr",
       (environmentMap) => {
         environmentMap.mapping = THREE.EquirectangularReflectionMapping;
         scene.background = environmentMap;
@@ -254,7 +181,7 @@ export default function useThreeScene(videos, options = {}) {
     textMesh.text = "Creative Developer";
     textMesh.fontSize = 1;
     textMesh.position.set(-5, 3, -4);
-    textMesh.color = 0x00ffff;
+    textMesh.color = 0x00ffff; // 0x00897b
     textMesh.font = "/fonts/Orbitron-VariableFont_wght.ttf"; // fuente TTF u OTF en tu carpeta public
     textMesh.sync(); // importante: genera la geometría
 
@@ -320,15 +247,16 @@ export default function useThreeScene(videos, options = {}) {
       requestAnimationFrame(animate);
       if (document.hidden) return;
 
-      const delta = clock.getElapsedTime();
-      lastRenderTime += delta;
-      if (lastRenderTime < frameInterval) return;
-      lastRenderTime = 0;
+      const delta = clock.getDelta();
 
       // if (holographicMaterials && holographicMaterials.length) {
       // holographicMaterials.forEach((mat) =>
       // updateHolographicTime(mat, delta)
       // );
+      // }
+      // if (holoEarthRef.current) {
+      // holoEarthRef.current.rotation.y += THREE.MathUtils.degToRad(23.5) * 0.5; // velocidad visible
+      // holoEarthRef.current.updateMatrixWorld(true); // 🔥 fuerza la actualización
       // }
 
       updateTarget();

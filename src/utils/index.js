@@ -110,9 +110,12 @@ export function loadModel({
   scale = [1, 1, 1],
   rotation = [0, 0, 0],
   shader = null,
+  materialOptions = {}, // 👈 nuevo parámetro opcional
+  addToScene = true, // 👈 para evitar añadirlo automáticamente si no quieres
 }) {
   return new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
+
     loader.load(
       url,
       (gltf) => {
@@ -121,6 +124,7 @@ export function loadModel({
         model.scale.set(...scale);
         model.rotation.set(...rotation);
 
+        // --- Si tiene animaciones ---
         let mixer = null;
         if (gltf.animations && gltf.animations.length) {
           mixer = new AnimationMixer(model);
@@ -129,9 +133,33 @@ export function loadModel({
           });
         }
 
+        // --- Aplicar shader si existe ---
         if (shader) shader(model);
 
-        scene.add(model);
+        // --- Aplicar opciones de material si se especifican ---
+        model.traverse((child) => {
+          if (child.isMesh) {
+            const opts = materialOptions;
+            if (opts.transparent !== undefined)
+              child.material.transparent = opts.transparent;
+            if (opts.opacity !== undefined)
+              child.material.opacity = opts.opacity;
+            if (opts.depthWrite !== undefined)
+              child.material.depthWrite = opts.depthWrite;
+            if (opts.color !== undefined)
+              child.material.color = new Color(opts.color);
+            if (opts.emissive !== undefined)
+              child.material.emissive = new Color(opts.emissive);
+            if (opts.wireframe !== undefined)
+              child.material.wireframe = opts.wireframe;
+
+            child.material.needsUpdate = true;
+          }
+        });
+
+        // --- Añadir a la escena solo si se desea ---
+        if (addToScene && scene) scene.add(model);
+
         resolve({ model, mixer });
       },
       undefined,
